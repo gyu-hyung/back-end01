@@ -10,6 +10,7 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -19,19 +20,15 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 import java.util.List;
 
-public class FirebaseIdTokenFilter extends OncePerRequestFilter {
+@RequiredArgsConstructor
+public class FirebaseAuthenticationFilter extends OncePerRequestFilter {
 
     private final AccountRepository accountRepository;
-
-    public FirebaseIdTokenFilter(AccountRepository accountRepository) {
-        this.accountRepository = accountRepository;
-    }
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,
-                                    FilterChain filterChain)
-            throws ServletException, IOException {
+                                    FilterChain filterChain) throws ServletException, IOException {
 
         String header = request.getHeader(HttpHeaders.AUTHORIZATION);
         if (header == null || !header.startsWith("Bearer ")) {
@@ -44,13 +41,31 @@ public class FirebaseIdTokenFilter extends OncePerRequestFilter {
         try {
             decodedToken = FirebaseAuth.getInstance().verifyIdToken(idToken);
         } catch (FirebaseAuthException e) {
+            System.out.println("not firebase token");
             filterChain.doFilter(request, response);
             return;
         }
 
         String uid = decodedToken.getUid();
+
+        //TODO 가지고 있는 사용자 정보로 가입 처리
+//                Account account = accountRepository.findByProviderAndProviderId(registrationId, providerId)
+//                .orElseGet(() -> {
+//                    Account newAccount = Account.builder()
+//                            .provider(registrationId)
+//                            .providerId(providerId)
+//                            .enabled(true)
+//                            .email(email)
+//                            .name(userInfo.getName())
+//                            .profileImage(userInfo.getImageUrl())
+//                            .role(Account.Role.USER)
+//                            .build();
+//                    return accountRepository.save(newAccount);
+//                });
+
         Account account = accountRepository.findByProviderAndProviderId("firebase", uid)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+
 
         UsernamePasswordAuthenticationToken authentication =
                 new UsernamePasswordAuthenticationToken(account, null,

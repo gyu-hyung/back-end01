@@ -1,6 +1,7 @@
 package com.example.back_end01.config;
 
 
+import com.example.back_end01.config.firebase.FirebaseAuthenticationFilter;
 import com.example.back_end01.config.firebase.FirebaseJwtAuthenticationConverter;
 import com.example.back_end01.config.formlogin.CustomUserDetailsService;
 import com.example.back_end01.config.jwt.JwtAuthenticationFilter;
@@ -15,7 +16,6 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.config.annotation.web.configurers.HeadersConfigurer;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
@@ -28,6 +28,7 @@ public class SecurityConfig {
     private final CustomUserDetailsService customUserDetailsService;
     private final JwtAuthenticationSuccessHandler jwtAuthenticationSuccessHandler;
     private final FirebaseJwtAuthenticationConverter firebaseConverter;
+    private final FirebaseAuthenticationFilter firebaseAuthenticationFilter;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
 
@@ -74,6 +75,7 @@ public class SecurityConfig {
 //                )
 //                .addFilterBefore(new FirebaseAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class)
 //                .addFilterBefore(new JwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(firebaseAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();
     }
