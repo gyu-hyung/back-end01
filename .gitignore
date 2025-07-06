@@ -37,6 +37,8 @@ out/
 .vscode/
 
 
+/data/**
+
 # .gitignore
 firebase-service-account.json
 
