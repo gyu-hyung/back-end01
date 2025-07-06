@@ -1,12 +1,12 @@
 package com.example.back_end01.Account;
 
-import com.example.back_end01.config.firebase.FirebaseTokenVerifier;
 import com.example.back_end01.config.jwt.JwtProvider;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.api.client.auth.oauth2.TokenResponse;
+import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseAuthException;
 import com.google.firebase.auth.FirebaseToken;
+import jakarta.servlet.http.Cookie;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -14,11 +14,9 @@ import org.springframework.web.bind.annotation.*;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/account")
+@RequestMapping("/account")
 @RequiredArgsConstructor
 public class AccountController {
-
-    private final FirebaseTokenVerifier firebaseTokenVerifier;
 
     private final AccountRepository accountRepository;
     private final JwtProvider jwtProvider;
@@ -29,7 +27,7 @@ public class AccountController {
     @GetMapping("/me")
     public ResponseEntity<?> getCurrentUser(@AuthenticationPrincipal Account account) {
         if (account == null) {
-            return ResponseEntity.status(401).body("Unauthorized");
+            return ResponseEntity.status(401).body(HttpStatus.UNAUTHORIZED);
         }
 
         return ResponseEntity.ok(account);
@@ -41,21 +39,29 @@ public class AccountController {
      * @return JWT Token(access, refresh)
      * @throws FirebaseAuthException
      */
-    @PostMapping("/auth/firebase-login")
+    @PostMapping("/firebase-login")
     public ResponseEntity<?> loginWithFirebase(@RequestHeader("Authorization") String authHeader) throws FirebaseAuthException {
         String idToken = authHeader.replace("Bearer ", "");
 
-        FirebaseToken firebaseToken = firebaseTokenVerifier.verifyIdToken(idToken);
-        String firebaseUid = firebaseToken.getUid();
-        String email = firebaseToken.getEmail();
+        FirebaseToken decodedToken;
+        try {
+            decodedToken = FirebaseAuth.getInstance().verifyIdToken(idToken);
+        } catch (FirebaseAuthException e) {
+            return ResponseEntity.status(401).body(HttpStatus.UNAUTHORIZED);
+        }
+
+
+        String firebaseUid = decodedToken.getUid();
+        String email = decodedToken.getEmail();
 
         Account account = accountRepository.findByProviderAndProviderId("firebase", firebaseUid)
                 .orElseGet(() -> {
+                    //존재하지 않을 시 생성.
                     Account newAccount = Account.builder()
                             .provider("firebase")
                             .providerId(firebaseUid)
                             .email(email)
-                            .name(firebaseToken.getName())
+                            .name(decodedToken.getName())
                             .role(Account.Role.USER)
                             .enabled(true)
                             .build();
@@ -63,12 +69,20 @@ public class AccountController {
                 });
 
         Map<String, Object> claims = account.toClaims();
+
         // 2. 자체 JWT 발급
         String accessToken = jwtProvider.createAccessToken(claims);
         String refreshToken = jwtProvider.createRefreshToken(claims);
+
+        // RefreshToken을 HttpOnly 쿠키로 설정
+        Cookie refreshCookie = new Cookie("refreshToken", refreshToken);
+        refreshCookie.setHttpOnly(true);
+        refreshCookie.setSecure(true);
+        refreshCookie.setPath("/");
+        refreshCookie.setMaxAge(7 * 24 * 60 * 60);
+
         Map<String, String> tokens = Map.of(
-                "accessToken", accessToken,
-                "refreshToken", refreshToken
+                "accessToken", accessToken
         );
 
         return ResponseEntity.ok(tokens);

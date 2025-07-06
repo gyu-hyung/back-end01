@@ -3,6 +3,7 @@ package com.example.back_end01.config.jwt;
 import com.example.back_end01.Account.Account;
 import com.example.back_end01.Account.AuthenticatedAccount;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -40,13 +41,21 @@ public class JwtAuthenticationSuccessHandler implements AuthenticationSuccessHan
         String accessToken = jwtProvider.createAccessToken(claims);
         String refreshToken = jwtProvider.createRefreshToken(claims);
 
+
+        // RefreshToken을 HttpOnly 쿠키로 설정
+        Cookie refreshCookie = new Cookie("refreshToken", refreshToken);
+        refreshCookie.setHttpOnly(true);
+        refreshCookie.setSecure(true); // HTTPS 환경에서만
+        refreshCookie.setPath("/");
+        refreshCookie.setMaxAge(7 * 24 * 60 * 60); // 7일
+        response.addCookie(refreshCookie);
+
         // JSON 응답
         response.setContentType("application/json");
         response.setCharacterEncoding("UTF-8");
 
         Map<String, String> tokens = Map.of(
-                "accessToken", accessToken,
-                "refreshToken", refreshToken
+                "accessToken", accessToken
         );
 
         new ObjectMapper().writeValue(response.getWriter(), tokens);

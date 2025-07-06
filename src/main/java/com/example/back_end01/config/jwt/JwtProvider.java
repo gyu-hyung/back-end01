@@ -2,6 +2,7 @@ package com.example.back_end01.config.jwt;
 
 import com.example.back_end01.Account.Account;
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
@@ -78,7 +79,7 @@ public class JwtProvider {
         try {
             parseClaims(token);
             return true;
-        } catch (JwtException | IllegalArgumentException e) {
+        } catch (JwtException | IllegalArgumentException | ExpiredJwtException e) {
             return false;
         }
     }

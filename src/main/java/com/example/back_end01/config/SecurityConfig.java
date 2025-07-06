@@ -1,8 +1,6 @@
 package com.example.back_end01.config;
 
 
-import com.example.back_end01.config.firebase.FirebaseAuthenticationFilter;
-import com.example.back_end01.config.firebase.FirebaseJwtAuthenticationConverter;
 import com.example.back_end01.config.formlogin.CustomUserDetailsService;
 import com.example.back_end01.config.jwt.JwtAuthenticationFilter;
 import com.example.back_end01.config.jwt.JwtAuthenticationSuccessHandler;
@@ -26,10 +24,8 @@ public class SecurityConfig {
 
     private final CustomOAuth2UserService customOAuth2UserService;
     private final CustomUserDetailsService customUserDetailsService;
-    private final JwtAuthenticationSuccessHandler jwtAuthenticationSuccessHandler;
-    private final FirebaseJwtAuthenticationConverter firebaseConverter;
-    private final FirebaseAuthenticationFilter firebaseAuthenticationFilter;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final JwtAuthenticationSuccessHandler jwtAuthenticationSuccessHandler;
 
 
     @Bean
@@ -44,7 +40,7 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .headers(headers -> headers.frameOptions(HeadersConfigurer.FrameOptionsConfig::disable))//h2-console 사용
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/admin/login", "/h2-console/**").permitAll()
+                        .requestMatchers("/admin/login", "/h2-console/**", "/swagger-ui/**", "/v3/api-docs/**", "/account/**").permitAll()
                         .requestMatchers("/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/**").authenticated()
                         .anyRequest().authenticated()
@@ -73,9 +69,19 @@ public class SecurityConfig {
 //                                .jwtAuthenticationConverter(firebaseConverter)
 //                        )
 //                )
-//                .addFilterBefore(new FirebaseAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class)
-//                .addFilterBefore(new JwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class)
-                .addFilterBefore(firebaseAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+//                // ✅ 로그인 페이지 리다이렉트 막기
+//                .exceptionHandling(exception -> exception
+//                        .authenticationEntryPoint((request, response, authException) -> {
+//                            response.setContentType("application/json");
+//                            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+//                            response.getWriter().write("{\"error\": \"Unauthorized access\"}");
+//                        })
+//                        .accessDeniedHandler((request, response, accessDeniedException) -> {
+//                                    response.setContentType("application/json");
+//                                    response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+//                                    response.getWriter().write("{\"error\": \"Access denied\"}");
+//                        })
+//                )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();
     }
